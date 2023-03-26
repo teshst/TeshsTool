@@ -13,17 +13,18 @@ Before using this script, please make sure you have the following:
 - Access to the folder containing the software packages
 
 ## How to use
+1. Ensure the Software folder exists and that software has be placed in it.
 
-1. Open a PowerShell terminal.
+2. Open a PowerShell terminal.
 
-2. Navigate to the directory where the script is saved.
+3. Navigate to the directory where the script is saved.
 
-3. In the terminal, type the following command to run the script or start the teshstool.exe:
+4. In the terminal, type the following command to run the script or start the teshstool.exe:
 
 ```powershell
 .\teshstool.ps1
 ```
-4. It will automatically start running the installs.
+5. It will automatically start running the installs.
 
 ## Troubleshooting
  - If you encounter any errors during the installation process, please check that you have the necessary permissions to install the software packages.
