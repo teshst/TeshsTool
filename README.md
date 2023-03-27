@@ -26,7 +26,7 @@ Before using this script, please make sure you have the following:
 ```
 5. Select desired software or select all.
 
-6. Click installt to begin installation.
+6. Click install to begin installation.
 
 ## Troubleshooting
  - If you encounter any errors during the installation process, please check that you have the necessary permissions to install the software packages.
