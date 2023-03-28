@@ -10,7 +10,7 @@ Before using this script, please make sure you have the following:
 
 - PowerShell 5.0 or later
 - Software packages with the extensions .exe, .msi, or .reg that need to be installed
-- Access to the folder containing the software packages
+- Proper permissions to run as admin.
 
 ## How to use
 1. Ensure the Software folder exists and that software has be placed in it.
@@ -24,7 +24,9 @@ Before using this script, please make sure you have the following:
 ```powershell
 .\teshstool.ps1
 ```
-5. It will automatically start running the installs.
+5. Select desired software or select all.
+
+6. Click install to begin installation.
 
 ## Troubleshooting
  - If you encounter any errors during the installation process, please check that you have the necessary permissions to install the software packages.

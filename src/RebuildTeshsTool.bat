@@ -45,4 +45,4 @@ if '%errorlevel%' NEQ '0' (
 :: Run PowerShell script as administrator
 PowerShell Set-ExecutionPolicy Bypass
 PowerShell Install-Module ps2exe
-PowerShell Invoke-ps2exe -inputFile .\TeshsTool.ps1 -outputFile ..\TeshsTool.exe -noconsole -requireAdmin -DPIAware -version '1.0.0'
+PowerShell Invoke-ps2exe -inputFile .\TeshsTool.ps1 -outputFile ..\TeshsTool.exe -noconsole -requireAdmin -version '1.0.0' -iconFile '../Assets/AppIcon.ico'
