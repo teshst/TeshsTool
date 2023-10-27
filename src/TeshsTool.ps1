@@ -7,13 +7,17 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     exit
 }
 
-# Locations
+# Location
+$iconPath = ".\Assets\icon.ico"
 $softwarePath = ".\Software"
 $uninstallPath = ".\Uninstallers"
 
 # Function to create the main window
 function New-MainWindow {
+    $icon = New-Object System.Drawing.Icon($iconPath)
+
     $mainWindow = New-Object Windows.Window
+    $mainWindow.Icon = $icon
     $mainWindow.Title = "TeshsTool-v1.1"
     $mainWindow.Width = 420
     $mainWindow.Height = 475
