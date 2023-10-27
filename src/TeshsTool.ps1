@@ -5,7 +5,7 @@ $softwarePath = ".\Software"
 $uninstallPath = ".\Uninstallers"
 
 # Function to create the main window
-function Create-MainWindow {
+function New-MainWindow {
     $mainWindow = New-Object Windows.Window
     $mainWindow.Title = "TeshsTool-v1.1"
     $mainWindow.Width = 420
@@ -31,8 +31,8 @@ function Create-MainWindow {
     $selectAllButton.Margin = "20,375,0,0"
 
     $deselectAllButton = New-Object Windows.Controls.Button
-    $deselectAllButton.Content = "Deselect All"
-    $deselectAllButton.Add_Click({ Deselect-AllPackages })
+    $deselectAllButton.Content = "Clear All"
+    $deselectAllButton.Add_Click({ Clear-AllPackages })
     $deselectAllButton.HorizontalAlignment = [Windows.HorizontalAlignment]::Left
     $deselectAllButton.VerticalAlignment = [Windows.VerticalAlignment]::Top
     $deselectAllButton.Width = 75
@@ -75,7 +75,7 @@ function Select-AllPackages {
 }
 
 # Function to deselect all packages
-function Deselect-AllPackages {
+function Clear-AllPackages {
     $packageListBox.Items | ForEach-Object {
         $_.IsSelected = $false
     }
@@ -94,7 +94,7 @@ function Uninstall-Packages {
 }
 
 # Function to create the progress window
-function Create-ProgressWindow {
+function New-ProgressWindow {
     $progressWindow = New-Object Windows.Window
     $progressWindow.Title = "Installing Packages"
     $progressWindow.Width = 420
@@ -161,7 +161,7 @@ function Quit($status) {
 function Install($selectedPackages) {
     $totalPackageCount = $selectedPackages.Count
     $progress = 0
-    $progressWindow, $progressLabel, $progressBar = Create-ProgressWindow
+    $progressWindow, $progressLabel, $progressBar = New-ProgressWindow
 
     foreach ($package in $selectedPackages) {
         $status = "Installing $($package.Name)..."
@@ -206,7 +206,7 @@ function Install($selectedPackages) {
 function Uninstall($selectedPackages) {
     $totalPackageCount = $selectedPackages.Count
     $progress = 0
-    $progressWindow, $progressLabel, $progressBar = Create-ProgressWindow
+    $progressWindow, $progressLabel, $progressBar = New-ProgressWindow
 
     foreach ($package in $selectedPackages) {
         $status = "Uninstalling $($package.Name)..."
@@ -260,6 +260,6 @@ $packageDirectories | ForEach-Object {
     $packageListBox.Items.Add($_.Name)
 }
 
-$mainWindow = Create-MainWindow
+$mainWindow = New-MainWindow
 
 $selectedPackages = $mainWindow.ShowDialog()
