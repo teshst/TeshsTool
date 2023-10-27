@@ -1,5 +1,12 @@
 Add-Type -AssemblyName PresentationFramework
 
+# Check if the script is running as administrator
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    # Relaunch the script as administrator
+    Start-Process powershell.exe "-File `"$PSCommandPath`"" -Verb RunAs
+    exit
+}
+
 # Locations
 $softwarePath = ".\Software"
 $uninstallPath = ".\Uninstallers"
@@ -23,7 +30,7 @@ function New-MainWindow {
     # Create buttons
     $selectAllButton = New-Object Windows.Controls.Button
     $selectAllButton.Content = "Select All"
-    $selectAllButton.Add_Click({ Select-AllPackages })
+    $selectAllButton.Add_Click({ $packageListBox.Items | ForEach-Object { $_.IsSelected = $true } })
     $selectAllButton.HorizontalAlignment = [Windows.HorizontalAlignment]::Left
     $selectAllButton.VerticalAlignment = [Windows.VerticalAlignment]::Top
     $selectAllButton.Width = 75
@@ -32,7 +39,7 @@ function New-MainWindow {
 
     $deselectAllButton = New-Object Windows.Controls.Button
     $deselectAllButton.Content = "Clear All"
-    $deselectAllButton.Add_Click({ Clear-AllPackages })
+    $deselectAllButton.Add_Click({ $packageListBox.Items | ForEach-Object { $_.IsSelected = $false } })
     $deselectAllButton.HorizontalAlignment = [Windows.HorizontalAlignment]::Left
     $deselectAllButton.VerticalAlignment = [Windows.VerticalAlignment]::Top
     $deselectAllButton.Width = 75
@@ -41,7 +48,7 @@ function New-MainWindow {
 
     $installButton = New-Object Windows.Controls.Button
     $installButton.Content = "Install"
-    $installButton.Add_Click({ Install-Packages })
+    $installButton.Add_Click({ Install-Packages $packageListBox.SelectedItems })
     $installButton.HorizontalAlignment = [Windows.HorizontalAlignment]::Left
     $installButton.VerticalAlignment = [Windows.VerticalAlignment]::Top
     $installButton.Width = 75
@@ -50,7 +57,7 @@ function New-MainWindow {
 
     $uninstallButton = New-Object Windows.Controls.Button
     $uninstallButton.Content = "Uninstall"
-    $uninstallButton.Add_Click({ Uninstall-Packages })
+    $uninstallButton.Add_Click({ Uninstall-Packages $packageListBox.SelectedItems })
     $uninstallButton.HorizontalAlignment = [Windows.HorizontalAlignment]::Left
     $uninstallButton.VerticalAlignment = [Windows.VerticalAlignment]::Top
     $uninstallButton.Width = 75
@@ -67,30 +74,56 @@ function New-MainWindow {
     return $mainWindow
 }
 
-# Function to select all packages
-function Select-AllPackages {
-    $packageListBox.Items | ForEach-Object {
-        $_.IsSelected = $true
+# Function to install or uninstall packages
+function Install-Uninstall-Packages($selectedPackages, $action) {
+    $totalPackageCount = $selectedPackages.Count
+    $progress = 0
+    $progressWindow, $progressLabel, $progressBar = New-ProgressWindow
+
+    foreach ($package in $selectedPackages) {
+        $status = "$action $($package.Name)..."
+        $percentComplete = ($progress / $totalPackageCount) * 100
+
+        $progress++
+        Update-ProgressWindow -progressWindow $progressWindow -progressLabel $progressLabel -progressBar $progressBar -status $status -percentComplete $percentComplete
+
+        $extension = [System.IO.Path]::GetExtension($package.Name)
+        $uninstallerFolder = Join-Path -Path $uninstallPath -ChildPath $package.Name  # Specify the path to the uninstaller folder
+
+        switch ($extension) {
+            ".exe" {
+                $arguments = "/S /v /qn"
+                $proclist += Start-Process -FilePath ($action -eq "Install" ? $package.FullName : "$uninstallerFolder\$($package.Name)") -ArgumentList $arguments -Wait -NoNewWindow
+            }
+            ".msi" {
+                $arguments = ($action -eq "Install" ? "/I `"$($package.FullName)`" /quiet" : "/X `"$uninstallerFolder\$($package.Name)`" /quiet")
+                $proclist += Start-Process -FilePath ($action -eq "Install" ? "msiexec.exe" : "$uninstallerFolder\$($package.Name)") -ArgumentList $arguments -Wait -NoNewWindow
+            }
+            ".ps1" {
+                $arguments = "`"$($package.FullName)`" -DeployMode 'Silent'"
+                $proclist += Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Wait -NoNewWindow
+            }
+            ".vbs" {
+                $arguments = "`"$($package.FullName)`""
+                $proclist += Start-Process -FilePath "cscript.exe" -ArgumentList $arguments -Wait -NoNewWindow
+            }
+            default {
+                Write-Verbose "No $($action.ToLower()) package found."
+            }
+        }
     }
+
+    Quit -status "$($action)ation Complete"
 }
 
-# Function to deselect all packages
-function Clear-AllPackages {
-    $packageListBox.Items | ForEach-Object {
-        $_.IsSelected = $false
-    }
+# Function to install packages
+function Install-Packages($selectedPackages) {
+    Install-Uninstall-Packages $selectedPackages "Install"
 }
 
-# Function to install selected packages
-function Install-Packages {
-    $selectedPackages = $packageListBox.SelectedItems
-    Install -selectedPackages $selectedPackages
-}
-
-# Function to uninstall selected packages
-function Uninstall-Packages {
-    $selectedPackages = $packageListBox.SelectedItems
-    Uninstall -selectedPackages $selectedPackages
+# Function to uninstall packages
+function Uninstall-Packages($selectedPackages) {
+    Install-Uninstall-Packages $selectedPackages "Uninstall"
 }
 
 # Function to create the progress window
@@ -123,7 +156,7 @@ function New-ProgressWindow {
 
     $progressWindow.Content = $grid
 
-    return $progressWindow
+    return $progressWindow, $progressLabel, $progressBar
 }
 
 # Function to update the progress window
@@ -157,109 +190,13 @@ function Quit($status) {
     $packageSelectionForm.Close()
 }
 
-# Function to install packages
-function Install($selectedPackages) {
-    $totalPackageCount = $selectedPackages.Count
-    $progress = 0
-    $progressWindow, $progressLabel, $progressBar = New-ProgressWindow
-
-    foreach ($package in $selectedPackages) {
-        $status = "Installing $($package.Name)..."
-        $percentComplete = ($progress / $totalPackageCount) * 100
-
-        $progress++
-        Update-ProgressWindow -progressWindow $progressWindow -progressLabel $progressLabel -progressBar $progressBar -status $status -percentComplete $percentComplete
-
-        $extension = [System.IO.Path]::GetExtension($package.Name)
-
-        switch ($extension) {
-            ".exe" {
-                $arguments = "/S /v /qn"
-                $proclist += Start-Process -FilePath $package.FullName -ArgumentList $arguments -Wait -NoNewWindow
-            }
-            ".msi" {
-                $arguments = "/I `"$($package.FullName)`" /quiet"
-                $proclist += Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow
-            }
-            ".reg" {
-                $arguments = "/s `"$($package.FullName)`""
-                $proclist += Start-Process -FilePath "regedit.exe" -ArgumentList $arguments -Wait -NoNewWindow
-            }
-            ".ps1" {
-                $arguments = "`"$($package.FullName)`" -DeployMode 'Silent'"
-                $proclist += Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Wait -NoNewWindow
-            }
-            ".vbs" {
-                $arguments = "`"$($package.FullName)`""
-                $proclist += Start-Process -FilePath "cscript.exe" -ArgumentList $arguments -Wait -NoNewWindow
-            }
-            default {
-                Write-Verbose "No package install package found."
-            }
-        }
-    }
-
-    Quit -status "Installation Complete"
-}
-
-# Function to uninstall packages
-function Uninstall($selectedPackages) {
-    $totalPackageCount = $selectedPackages.Count
-    $progress = 0
-    $progressWindow, $progressLabel, $progressBar = New-ProgressWindow
-
-    foreach ($package in $selectedPackages) {
-        $status = "Uninstalling $($package.Name)..."
-        $percentComplete = ($progress / $totalPackageCount) * 100
-
-        $progress++
-        Update-ProgressWindow -progressWindow $progressWindow -progressLabel $progressLabel -progressBar $progressBar -status $status -percentComplete $percentComplete
-
-        $extension = [System.IO.Path]::GetExtension($package.Name)
-        $uninstallerFolder = Join-Path -Path $uninstallPath -ChildPath $package.Name  # Specify the path to the uninstaller folder
-
-        switch ($extension) {
-            ".exe" {
-                $arguments = "/S /v /qn"
-                $proclist += Start-Process -FilePath "$uninstallerFolder\$($package.Name)" -ArgumentList $arguments -Wait -NoNewWindow
-            }
-            ".msi" {
-                $arguments = "/X `"$uninstallerFolder\$($package.Name)`" /quiet"
-                $proclist += Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow
-            }
-            ".ps1" {
-                $arguments = "`"$($package.FullName)`""
-                $proclist += Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Wait -NoNewWindow
-            }
-            ".vbs" {
-                $arguments = "`"$($package.FullName)`""
-                $proclist += Start-Process -FilePath "cscript.exe" -ArgumentList $arguments -Wait -NoNewWindow
-            }
-            default {
-                Write-Verbose "No uninstall package found"
-            }
-        }
-    }
-
-    Quit -status "Uninstall Complete"
-}
-
-# Kill process on error
-trap {
-    Write-Host "Killed processes."
-    $proclist | ForEach-Object {
-        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
-    }
-}
-
 # Main Logic
 $packageDirectories = Get-ChildItem $softwarePath -File
 
 # Populate the ListBox with available packages
+$packageListBox = New-MainWindow | Select-Object -ExpandProperty Content
 $packageDirectories | ForEach-Object {
     $packageListBox.Items.Add($_.Name)
 }
 
-$mainWindow = New-MainWindow
-
-$selectedPackages = $mainWindow.ShowDialog()
+$selectedPackages = $packageListBox.ShowDialog()
