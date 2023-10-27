@@ -1,3 +1,5 @@
+# FILEPATH
+(Get-Content -Path $FilePath -Raw) -replace "(?smi)^(.*)$", "<#`n$1`n#>" | Set-Content -Path $FilePath
 Add-Type -AssemblyName PresentationFramework
 
 # Locations
