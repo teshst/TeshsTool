@@ -1,206 +1,376 @@
-Add-Type -AssemblyName PresentationFramework
+Add-Type -AssemblyName System.Windows.Forms
 
-# Check if the script is running as administrator
-if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    # Relaunch the script as administrator
-    Start-Process powershell.exe "-File `"$PSCommandPath`"" -Verb RunAs
-    exit
-}
-
-# Location
-$iconPath = ".\Assets\icon.ico"
+# Locations
+$appIconPath = ".\Assets\AppIcon.ico"
 $softwarePath = ".\Software"
-$uninstallPath = ".\Uninstallers"
+$logPath = ".\Logs"
 
-# Function to create the main window
-function New-MainWindow {
-    $icon = New-Object System.Drawing.Icon($iconPath)
+# Initialize process list
+$proclist = @()
 
-    $mainWindow = New-Object Windows.Window
-    $mainWindow.Icon = $icon
-    $mainWindow.Title = "TeshsTool-v1.1"
-    $mainWindow.Width = 420
-    $mainWindow.Height = 475
-    $mainWindow.WindowStartupLocation = [Windows.WindowStartupLocation]::CenterScreen
+# Stop on all errors
+$ErrorActionPreference = "Stop"
 
-    # Create a ListBox to display the available packages
-    $packageListBox = New-Object Windows.Controls.ListBox
-    $packageListBox.Name = "packageListBox"
-    $packageListBox.Width = 360
-    $packageListBox.Height = 350
-    $packageListBox.Margin = "20,20,0,0"
-    $mainWindow.Content = $packageListBox
-
-    # Create buttons
-    $selectAllButton = New-Object Windows.Controls.Button
-    $selectAllButton.Content = "Select All"
-    $selectAllButton.Add_Click({ $packageListBox.Items | ForEach-Object { $_.IsSelected = $true } })
-    $selectAllButton.HorizontalAlignment = [Windows.HorizontalAlignment]::Left
-    $selectAllButton.VerticalAlignment = [Windows.VerticalAlignment]::Top
-    $selectAllButton.Width = 75
-    $selectAllButton.Height = 23
-    $selectAllButton.Margin = "20,375,0,0"
-
-    $deselectAllButton = New-Object Windows.Controls.Button
-    $deselectAllButton.Content = "Clear All"
-    $deselectAllButton.Add_Click({ $packageListBox.Items | ForEach-Object { $_.IsSelected = $false } })
-    $deselectAllButton.HorizontalAlignment = [Windows.HorizontalAlignment]::Left
-    $deselectAllButton.VerticalAlignment = [Windows.VerticalAlignment]::Top
-    $deselectAllButton.Width = 75
-    $deselectAllButton.Height = 23
-    $deselectAllButton.Margin = "100,375,0,0"
-
-    $installButton = New-Object Windows.Controls.Button
-    $installButton.Content = "Install"
-    $installButton.Add_Click({ Install-Packages $packageListBox.SelectedItems })
-    $installButton.HorizontalAlignment = [Windows.HorizontalAlignment]::Left
-    $installButton.VerticalAlignment = [Windows.VerticalAlignment]::Top
-    $installButton.Width = 75
-    $installButton.Height = 23
-    $installButton.Margin = "305,375,0,0"
-
-    $uninstallButton = New-Object Windows.Controls.Button
-    $uninstallButton.Content = "Uninstall"
-    $uninstallButton.Add_Click({ Uninstall-Packages $packageListBox.SelectedItems })
-    $uninstallButton.HorizontalAlignment = [Windows.HorizontalAlignment]::Left
-    $uninstallButton.VerticalAlignment = [Windows.VerticalAlignment]::Top
-    $uninstallButton.Width = 75
-    $uninstallButton.Height = 23
-    $uninstallButton.Margin = "305,400,0,0"
-
-    # Add buttons to the main window
-    $mainWindow.Content = $packageListBox
-    $mainWindow.Children.Add($selectAllButton)
-    $mainWindow.Children.Add($deselectAllButton)
-    $mainWindow.Children.Add($installButton)
-    $mainWindow.Children.Add($uninstallButton)
-
-    return $mainWindow
+# Log errors
+function Save-Log($package, $message) {
+    $logFile = Join-Path -Path $logPath -ChildPath ("Log_" + (Get-Date -Format "yyyyMMdd_HHmmss") + ".txt")
+    $logMessage = "$(Get-Date) - $($package.FullName): $message"
+    Add-Content -Path $logFile -Value $logMessage
+    Show-Message $logMessage
 }
 
-# Function to install or uninstall packages
-function Install-Uninstall-Packages($selectedPackages, $action) {
-    $totalPackageCount = $selectedPackages.Count
-    $progress = 0
-    $progressWindow, $progressLabel, $progressBar = New-ProgressWindow
+# Show message window
+function Show-Message($message) {
+    $messageForm = New-Object System.Windows.Forms.Form
+    $messageForm.Text = "Info"
+    $messageForm.Size = New-Object System.Drawing.Size(400, 150)
+    $messageForm.StartPosition = "CenterScreen"
+    $messageForm.Icon = New-Object System.Drawing.Icon($appIconPath)
 
-    foreach ($package in $selectedPackages) {
-        $status = "$action $($package.Name)..."
-        $percentComplete = ($progress / $totalPackageCount) * 100
+    $messageLabel = New-Object System.Windows.Forms.Label
+    $messageLabel.AutoSize = $false
+    $messageLabel.AutoSize = $true
+    $messageLabel.Location = New-Object System.Drawing.Point(20, 20)
+    $messageLabel.Text = $message
+    $messageLabel.TextAlign = [System.Drawing.ContentAlignment]::TopLeft
+    $messageLabel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
 
-        $progress++
-        Update-ProgressWindow -progressWindow $progressWindow -progressLabel $progressLabel -progressBar $progressBar -status $status -percentComplete $percentComplete
+    $okButton = New-Object System.Windows.Forms.Button
+    $okButton.Text = "Ok"
+    $okButton.Location = New-Object System.Drawing.Point(150, 80)
+    $okButton.AutoSize = $true
+    $okButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom
 
-        $extension = [System.IO.Path]::GetExtension($package.Name)
-        $uninstallerFolder = Join-Path -Path $uninstallPath -ChildPath $package.Name  # Specify the path to the uninstaller folder
+    $okButton.Add_Click{
+        $messageForm.Dispose()
+        $messageForm.Close()
+    }
 
-        switch ($extension) {
-            ".exe" {
-                $arguments = "/S /v /qn"
-                $proclist += Start-Process -FilePath ($action -eq "Install" ? $package.FullName : "$uninstallerFolder\$($package.Name)") -ArgumentList $arguments -Wait -NoNewWindow
-            }
-            ".msi" {
-                $arguments = ($action -eq "Install" ? "/I `"$($package.FullName)`" /quiet" : "/X `"$uninstallerFolder\$($package.Name)`" /quiet")
-                $proclist += Start-Process -FilePath ($action -eq "Install" ? "msiexec.exe" : "$uninstallerFolder\$($package.Name)") -ArgumentList $arguments -Wait -NoNewWindow
-            }
-            ".ps1" {
-                $arguments = "`"$($package.FullName)`" -DeployMode 'Silent'"
-                $proclist += Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Wait -NoNewWindow
-            }
-            ".vbs" {
-                $arguments = "`"$($package.FullName)`""
-                $proclist += Start-Process -FilePath "cscript.exe" -ArgumentList $arguments -Wait -NoNewWindow
-            }
-            default {
-                Write-Verbose "No $($action.ToLower()) package found."
-            }
+    $messageForm.Controls.Add($messageLabel)
+    $messageForm.Controls.Add($okButton)
+
+    $messageForm.ShowDialog()
+}
+
+# Check if log folder exist if not create it
+if (-not (Test-Path -Path $logPath)) {
+    Show-Message "Log directory not found. Creating directory..."
+    New-Item -Path $logPath -ItemType Directory
+}
+
+# Check if software folder exist if not create it
+if (-not (Test-Path -Path $softwarePath)) {
+    Show-Message "Software directory not found. Creating directory..."
+    New-Item -Path $softwarePath -ItemType Directory
+}
+
+# Check if locations are empty
+if ((Get-ChildItem -Path $softwarePath).Count -eq 0) {
+    Show-Message "Software directory is empty. Please add packages to install."
+}
+
+# Move any .txt files to log folder unless licene.txt
+Get-ChildItem -Path $softwarePath -Filter *.txt | Where-Object { $_.Name -ne "license.txt" } | Move-Item -Destination $logPath
+
+# Kill any running processes started by this script
+function Close-Processes($processes) {
+    foreach ($process in $processes) {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# Add checked items to list
+function CheckedItems($packageDirectories, $selectedDirectories) {
+    for ($i = 0; $i -lt $packageDirectories.Count; $i++) {
+        if ($checkedListBox.GetItemChecked($i)) {
+            $selectedDirectories.Add($packageDirectories[$i])
         }
     }
-
-    Quit -status "$($action)ation Complete"
+    return $selectedDirectories
 }
 
-# Function to install packages
-function Install-Packages($selectedPackages) {
-    Install-Uninstall-Packages $selectedPackages "Install"
-}
+# Main window for application
+function Show-PackageSelectionForm($packageDirectories) {
 
-# Function to uninstall packages
-function Uninstall-Packages($selectedPackages) {
-    Install-Uninstall-Packages $selectedPackages "Uninstall"
-}
+    $selectedDirectories = New-Object System.Collections.Generic.List[System.IO.DirectoryInfo]
 
-# Function to create the progress window
-function New-ProgressWindow {
-    $progressWindow = New-Object Windows.Window
-    $progressWindow.Title = "Installing Packages"
-    $progressWindow.Width = 420
-    $progressWindow.Height = 150
-    $progressWindow.WindowStartupLocation = [Windows.WindowStartupLocation]::CenterScreen
+    # UI Elements
+    $packageSelectionForm = New-Object System.Windows.Forms.Form
+    $packageSelectionForm.Text = "TeshsTool-v2.0"
+    $packageSelectionForm.Size = New-Object System.Drawing.Size(420, 450)
+    $packageSelectionForm.StartPosition = "CenterScreen"
 
-    # Create a Grid to hold UI elements
-    $grid = New-Object Windows.Controls.Grid
+    $checkedListBox = New-Object System.Windows.Forms.CheckedListBox
+    $checkedListBox.Size = New-Object System.Drawing.Size(360, 350)
+    $checkedListBox.Location = New-Object System.Drawing.Point(20, 20)
+    $checkedListBox.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 12)
+    $packageSelectionForm.Controls.Add($checkedListBox)
 
-    $progressLabel = New-Object Windows.Controls.Label
-    $progressLabel.Content = "Preparing..."
-    $progressLabel.HorizontalAlignment = [Windows.HorizontalAlignment]::Left
-    $progressLabel.VerticalAlignment = [Windows.VerticalAlignment]::Top
-    $progressLabel.Margin = "20,20,0,0"
-    $grid.Children.Add($progressLabel)
+    $selectAllButton = New-Object System.Windows.Forms.Button
+    $selectAllButton.Text = "Select All"
+    $selectAllButton.Location = New-Object System.Drawing.Point(20, 375)
+    $selectAllButton.Size = New-Object System.Drawing.Size(75, 23)
+    $packageSelectionForm.Controls.Add($selectAllButton)
 
-    $progressBar = New-Object Windows.Controls.ProgressBar
-    $progressBar.Name = "progressBar"
-    $progressBar.HorizontalAlignment = [Windows.HorizontalAlignment]::Left
-    $progressBar.VerticalAlignment = [Windows.VerticalAlignment]::Top
-    $progressBar.Width = 360
-    $progressBar.Height = 30
-    $progressBar.Margin = "20,50,0,0"
-    $progressBar.Style = [Windows.Controls.ProgressBarStyle]::Continuous
-    $grid.Children.Add($progressBar)
+    $deselectAllButton = New-Object System.Windows.Forms.Button
+    $deselectAllButton.Text = "Deselect All"
+    $deselectAllButton.Location = New-Object System.Drawing.Point(100, 375)
+    $deselectAllButton.Size = New-Object System.Drawing.Size(75, 23)
+    $packageSelectionForm.Controls.Add($deselectAllButton)
 
-    $progressWindow.Content = $grid
+    $installButton = New-Object System.Windows.Forms.Button
+    $installButton.Text = "Install"
+    $installButton.Location = New-Object System.Drawing.Point(305, 375)
+    $installButton.Size = New-Object System.Drawing.Size(75, 23)
+    $packageSelectionForm.Controls.Add($installButton)
 
-    return $progressWindow, $progressLabel, $progressBar
-}
+    $uninstallButton = New-Object System.Windows.Forms.Button
+    $uninstallButton.Text = "Uninstall"
+    $uninstallButton.Location = New-Object System.Drawing.Point(225, 375)
+    $uninstallButton.Size = New-Object System.Drawing.Size(75, 23)
+    $packageSelectionForm.Controls.Add($uninstallButton)
 
-# Function to update the progress window
-function Update-ProgressWindow {
-    param (
-        $progressWindow,
-        $progressLabel,
-        $progressBar,
-        $status,
-        $percentComplete
-    )
+    $packageSelectionForm.Icon = New-Object System.Drawing.Icon($appIconPath)
 
-    $progressLabel.Content = $status
-    $progressBar.Value = [int]$percentComplete
-    $progressWindow.UpdateLayout()
-}
-
-# Function to handle quitting and process termination
-function Quit($status) {
-    $progressLabel.Content = $status
-    $progressBar.Value = 100
-    $progressWindow.UpdateLayout()
-
-    # Kill all started processes
-    $proclist | ForEach-Object {
-        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+    foreach ($packageDirectory in $packageDirectories) {
+        $checkedListBox.Items.Add($packageDirectory.Name, $false)
+    }
+    $selectAllButton.Add_Click{
+        for ($i = 0; $i -lt $checkedListBox.Items.Count; $i++) {
+            $checkedListBox.SetItemChecked($i, $true)
+        }
+    }
+    $deselectAllButton.Add_Click{
+        for ($i = 0; $i -lt $checkedListBox.Items.Count; $i++) {
+            $checkedListBox.SetItemChecked($i, $false)
+        }
+    }
+    $installButton.Add_Click{
+        CheckedItems $packageDirectories $selectedDirectories
+        Install-Packages -selectedDirectories $selectedDirectories
     }
 
-    Start-Sleep -Seconds 3
-    $progressWindow.Close()
+    $uninstallButton.Add_Click{
+        CheckedItems $packageDirectories $selectedDirectories
+        Uninstall-Packages -selectedDirectories $selectedDirectories
+    }
+
+    $packageSelectionForm.Add_Closing{
+        Quit
+    }
+
+    if ($packageSelectionForm.ShowDialog() -eq "Ok") {
+    }
+}
+
+# Main window for progress tracking
+function Show-ProgressForm() {
+    $packageSelectionForm.Dispose()
+
+    $progressForm = New-Object System.Windows.Forms.Form
+    $progressForm.Text = "Installing Packages"
+    $progressForm.Size = New-Object System.Drawing.Size(420, 150)
+    $progressForm.StartPosition = "CenterScreen"
+    $progressForm.Icon = New-Object System.Drawing.Icon($appIconPath)
+
+    $progressLabel = New-Object System.Windows.Forms.Label
+    $progressLabel.Size = New-Object System.Drawing.Size(360, 20)
+    $progressLabel.Location = New-Object System.Drawing.Point(20, 20)
+    $progressLabel.Text = "Preparing..."
+
+    $progressForm.Controls.Add($progressLabel)
+
+    $progressBar = New-Object System.Windows.Forms.ProgressBar
+    $progressBar.Size = New-Object System.Drawing.Size(360, 30)
+    $progressBar.Location = New-Object System.Drawing.Point(20, 50)
+    $progressBar.Style = "Continuous"
+
+    $progressForm.Controls.Add($progressBar)
+    $progressForm.Show()
+    $progressForm.Refresh()
+
+    return $progressForm, $progressLabel, $progressBar
+}
+
+# Update progress window
+function Update-ProgressForm ($progressForm, $progressLabel, $progressBar, $status, $percentComplete) {
+    $progressLabel.Text = $status
+    $progressBar.Value = [int]$percentComplete
+    $progressForm.Refresh()
+}
+
+# Close progress window
+function Complete-ProgressForm($Status) {
+    $progressLabel.Text = $Status
+    $progressBar.Value = 100
+    $progressForm.Refresh()
+
+    Close-Processes $proclist
+
+    $progressForm.Dispose()
+    $progressForm.Close()
+
+    $selectedDirectories.Clear()
+
+    $selectedDirectories = Show-PackageSelectionForm -packageDirectories $packageDirectories
+}
+
+# Close main window
+function Quit() {
+
+    Close-Processes $proclist
+
+    $packageSelectionForm.Dispose()
     $packageSelectionForm.Close()
 }
 
-# Main Logic
-$packageDirectories = Get-ChildItem $softwarePath -File
-
-# Populate the ListBox with available packages
-$packageListBox = New-MainWindow | Select-Object -ExpandProperty Content
-$packageDirectories | ForEach-Object {
-    $packageListBox.Items.Add($_.Name)
+# Install packages
+function Install($selectedDirectories) {
+    $progress = 0
+    if ($selectedDirectories.Count -gt 0) {
+        $progressForm, $progressLabel, $progressBar = Show-ProgressForm
+        foreach ($selectedDirectory in $selectedDirectories) {
+            $directoryPath = Join-Path -Path $softwarePath -ChildPath $selectedDirectory.Name
+            $packages = Get-ChildItem $directoryPath | Where-Object { $_.Extension -match "/*.(exe|msi|reg|ps1|vbs)$" -and $_.Name -notmatch '\.uninstaller\.\w+$' }
+            $currentPackage = 0
+            foreach ($package in $packages) {
+                $currentPackage++
+                $status = "Installing $($selectedDirectory.Name) ($($currentPackage)/$($packages.count))..."
+                $percentComplete = ($progress / $selectedDirectories.Count) * 100
+                $progress++
+                Update-ProgressForm -progressForm $progressForm -progressLabel $progressLabel -progressBar $progressBar -status $status -percentComplete $percentComplete
+                $extension = $package.Extension
+                switch ($extension) {
+                    ".exe" {
+                        $arguments = " /S /v /qn"
+                        try {
+                            $proclist += Start-Process -FilePath "`"$($package.FullName)`"" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                        }
+                        catch {
+                            Save-Log $package $_.Exception.Message
+                        }
+                    }
+                    ".msi" {
+                        $arguments = "/i `"$($package.FullName)`" /quiet /norestart"
+                        try {
+                            $proclist += Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                        }
+                        catch {
+                            Save-Log $package $_.Exception.Message
+                        }
+                    }
+                    ".reg" {
+                        $arguments = "/s `"$($package.FullName)`""
+                        try {
+                            $proclist += Start-Process -FilePath "regedit.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                        }
+                        catch {
+                            Save-Log $package $_.Exception.Message
+                        }
+                    }
+                    ".ps1" {
+                        $arguments = "& $($package.FullName)"
+                        try {
+                            $proclist += Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                        }
+                        catch {
+                            Save-Log $package $_.Exception.Message
+                        }
+                    }
+                    ".vbs" {
+                        $arguments = "`"$($package.FullName)`""
+                        try {
+                            $proclist += Start-Process -FilePath "wscript.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                        }
+                        catch {
+                            Save-Log $package $_.Exception.Message
+                        }
+                    }
+                }
+            }
+        }
+        Complete-ProgressForm -Status "Installation Complete"
+    }
+    else {
+        Show-Message "No packages selected."
+    }
 }
 
-$selectedPackages = $packageListBox.ShowDialog()
+# Uninstall packages
+function Uninstall($selectedDirectories) {
+    $progress = 0
+    if ($selectedDirectories.Count -gt 0) {
+        $progressForm, $progressLabel, $progressBar = Show-ProgressForm
+        foreach ($selectedDirectory in $selectedDirectories) {
+            $directoryPath = Join-Path -Path $softwarePath -ChildPath $selectedDirectory.Name
+            $packages = Get-ChildItem $directoryPath | Where-Object { $_.Extension -match "/*.(msi)$" -or $_.Name -match '\.uninstaller\.\w+$' }
+            $currentPackage = 0
+            foreach ($package in $packages) {
+                $currentPackage++
+                $status = "Uninstalling $($selectedDirectory.Name) ($($currentPackage)/$($packages.count))..."
+                $percentComplete = ($progress / $selectedDirectories.Count) * 100
+                $progress++
+                Update-ProgressForm -progressForm $progressForm -progressLabel $progressLabel -progressBar $progressBar -status $status -percentComplete $percentComplete
+                $extension = $package.Extension
+                switch ($extension) {
+                    ".msi" {
+                        $arguments = "/x `"$($package.FullName)`" /quiet /norestart"
+                        try {
+                            $proclist += Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                        }
+                        catch {
+                            Save-Log $package $_.Exception.Message
+                        }
+                    }
+                    ".ps1" {
+                        $arguments = "& $($package.FullName)"
+                        try {
+                            $proclist += Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                        }
+                        catch {
+                            Save-Log $package $_.Exception.Message
+                        }
+                    }
+                    ".vbs" {
+                        $arguments = "`"$($package.FullName)`""
+                        try {
+                            $proclist += Start-Process -FilePath "wscript.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                        }
+                        catch {
+                            Save-Log $package $_.Exception.Message
+                        }
+                    }
+                    ".reg" {
+                        $arguments = " /s `"$($package.FullName)`""
+                        try {
+                            $proclist += Start-Process -FilePath "regedit.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                        }
+                        catch {
+                            Save-Log $package $_.Exception.Message
+                        }
+                    }
+                }
+            }
+        }
+        Complete-ProgressForm -Status "Uninstall Complete"
+    }
+    else {
+        Show-Message "No packages selected."
+    }
+}
+
+# Install packages function connected to UI
+function Install-Packages($selectedDirectories) {
+    Install -selectedDirectories $selectedDirectories
+}
+
+# Uninstall packages function connected to UI
+function Uninstall-Packages($selectedDirectories) {
+    Uninstall -selectedDirectories $selectedDirectories
+}
+
+# Get all directories in software folder
+$packageDirectories = Get-ChildItem $softwarePath -Directory
+
+# Show main window
+$selectedDirectories = Show-PackageSelectionForm -packageDirectories $packageDirectories
