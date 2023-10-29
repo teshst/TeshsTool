@@ -1,4 +1,4 @@
-[![Codacy Security](https://github.com/teshst/TeshsTool/actions/workflows/codacy.yml/badge.svg?branch=main)](https://github.com/teshst/TeshsTool/actions/workflows/codacy.yml) [![PSScriptAnalyzer](https://github.com/teshst/TeshsTool/actions/workflows/powershell.yml/badge.svg?branch=main)](https://github.com/teshst/TeshsTool/actions/workflows/powershell.yml)
+[![Codacy Security Scan](https://github.com/teshst/TeshsTool/actions/workflows/codacy.yml/badge.svg?branch=main)](https://github.com/teshst/TeshsTool/actions/workflows/codacy.yml) [![PSScriptAnalyzer](https://github.com/teshst/TeshsTool/actions/workflows/powershell.yml/badge.svg?branch=main)](https://github.com/teshst/TeshsTool/actions/workflows/powershell.yml)
 # TeshsTool - User Guide
 
 TeshsTool is a PowerShell script designed to automate the installation of software packages on Windows-based machines. The script utilizes WinForms for the graphical user interface (GUI).
