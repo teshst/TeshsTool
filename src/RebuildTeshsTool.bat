@@ -22,4 +22,4 @@ if '%errorlevel%' NEQ '0' (
 :: Run PowerShell script as administrator
 PowerShell Set-ExecutionPolicy Bypass
 PowerShell Install-Module ps2exe
-PowerShell Invoke-ps2exe -inputFile .\TeshsTool.ps1 -outputFile ..\TeshsTool.exe -noconsole -requireAdmin -version '2.0.0' -iconFile '../Assets/AppIcon.ico' -company 'Seth Earnhardt' -product 'TeshsTool' -copyright 'Copyright (c) 2023 Seth Earnhardt'
+PowerShell Invoke-ps2exe -inputFile .\TeshsTool.ps1 -outputFile ..\TeshsTool.exe -noconsole -requireAdmin -version '2.0.0' -iconFile '../Assets/AppIcon.ico' -company 'Seth Earnhardt' -product 'TeshsTool' -copyright 'Copyright (c) 2023 Seth Earnhardt' -x64

@@ -11,7 +11,7 @@ $proclist = @()
 # Stop on all errors
 $ErrorActionPreference = "Stop"
 
-# Log errors
+# Save logs to log folder
 function Save-Log($package, $message) {
     $logFile = Join-Path -Path $logPath -ChildPath ("Log_" + (Get-Date -Format "yyyyMMdd_HHmmss") + ".txt")
     $logMessage = "$(Get-Date) - $($package.FullName): $message"
@@ -68,14 +68,14 @@ if (-not (Test-Path -Path $softwarePath)) {
 Get-ChildItem -Path $softwarePath -Filter *.txt | Where-Object { $_.Name -ne "license.txt" } | Move-Item -Destination $logPath
 
 # Kill any running processes started by this script
-function Close-Processes($processes) {
+function Close-Process($processes) {
     foreach ($process in $processes) {
         Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
     }
 }
 
 # Add checked items to list
-function Get-CheckedItems($packageDirectories, $selectedDirectories) {
+function Get-SelectedItem($packageDirectories, $selectedDirectories) {
     for ($i = 0; $i -lt $packageDirectories.Count; $i++) {
         if ($checkedListBox.GetItemChecked($i)) {
             $selectedDirectories.Add($packageDirectories[$i])
@@ -130,24 +130,27 @@ function Show-PackageSelectionForm($packageDirectories) {
     foreach ($packageDirectory in $packageDirectories) {
         $checkedListBox.Items.Add($packageDirectory.Name, $false)
     }
+
     $selectAllButton.Add_Click{
         for ($i = 0; $i -lt $checkedListBox.Items.Count; $i++) {
             $checkedListBox.SetItemChecked($i, $true)
         }
     }
+
     $deselectAllButton.Add_Click{
         for ($i = 0; $i -lt $checkedListBox.Items.Count; $i++) {
             $checkedListBox.SetItemChecked($i, $false)
         }
     }
+
     $installButton.Add_Click{
-        Get-CheckedItems $packageDirectories $selectedDirectories
-        Install-Packages -selectedDirectories $selectedDirectories
+        Get-SelectedItem $packageDirectories $selectedDirectories
+        Install-Package $selectedDirectories
     }
 
     $uninstallButton.Add_Click{
-        Get-CheckedItems $packageDirectories $selectedDirectories
-        Uninstall-Packages -selectedDirectories $selectedDirectories
+        Get-SelectedItem $packageDirectories $selectedDirectories
+        Uninstall-Package $selectedDirectories
     }
 
     $packageSelectionForm.Add_Closing{
@@ -200,20 +203,21 @@ function Complete-ProgressForm($Status) {
     $progressBar.Value = 100
     $progressForm.Refresh()
 
-    Close-Processes $proclist
+    Close-Process $proclist
 
     $progressForm.Dispose()
     $progressForm.Close()
 
     $selectedDirectories.Clear()
 
-    $selectedDirectories = Show-PackageSelectionForm -packageDirectories $packageDirectories
+    $selectedDirectories = Show-PackageSelectionForm $packageDirectories
 }
 
 # Close main window
 function Quit() {
 
-    Close-Processes $proclist
+    Close-Process
+    $proclist
 
     $packageSelectionForm.Dispose()
     $packageSelectionForm.Close()
@@ -355,17 +359,17 @@ function Uninstall($selectedDirectories) {
 }
 
 # Install packages function connected to UI
-function Install-Packages($selectedDirectories) {
-    Install -selectedDirectories $selectedDirectories
+function Install-Package($selectedDirectories) {
+    Install $selectedDirectories
 }
 
 # Uninstall packages function connected to UI
-function Uninstall-Packages($selectedDirectories) {
-    Uninstall -selectedDirectories $selectedDirectories
+function Uninstall-Package($selectedDirectories) {
+    Uninstall $selectedDirectories
 }
 
 # Get all directories in software folder
 $packageDirectories = Get-ChildItem $softwarePath -Directory
 
 # Show main window
-$selectedDirectories = Show-PackageSelectionForm -packageDirectories $packageDirectories
+$selectedDirectories = Show-PackageSelectionForm $packageDirectories
