@@ -64,11 +64,6 @@ if (-not (Test-Path -Path $softwarePath)) {
     New-Item -Path $softwarePath -ItemType Directory
 }
 
-# Check if locations are empty
-if ((Get-ChildItem -Path $softwarePath).Count -eq 0) {
-    Show-Message "Software directory is empty. Please add packages to install."
-}
-
 # Move any .txt files to log folder unless licene.txt
 Get-ChildItem -Path $softwarePath -Filter *.txt | Where-Object { $_.Name -ne "license.txt" } | Move-Item -Destination $logPath
 
@@ -80,7 +75,7 @@ function Close-Processes($processes) {
 }
 
 # Add checked items to list
-function CheckedItems($packageDirectories, $selectedDirectories) {
+function Get-CheckedItems($packageDirectories, $selectedDirectories) {
     for ($i = 0; $i -lt $packageDirectories.Count; $i++) {
         if ($checkedListBox.GetItemChecked($i)) {
             $selectedDirectories.Add($packageDirectories[$i])
@@ -96,7 +91,7 @@ function Show-PackageSelectionForm($packageDirectories) {
 
     # UI Elements
     $packageSelectionForm = New-Object System.Windows.Forms.Form
-    $packageSelectionForm.Text = "TeshsTool-v2.0"
+    $packageSelectionForm.Text = "TeshsTool"
     $packageSelectionForm.Size = New-Object System.Drawing.Size(420, 450)
     $packageSelectionForm.StartPosition = "CenterScreen"
 
@@ -146,12 +141,12 @@ function Show-PackageSelectionForm($packageDirectories) {
         }
     }
     $installButton.Add_Click{
-        CheckedItems $packageDirectories $selectedDirectories
+        Get-CheckedItems $packageDirectories $selectedDirectories
         Install-Packages -selectedDirectories $selectedDirectories
     }
 
     $uninstallButton.Add_Click{
-        CheckedItems $packageDirectories $selectedDirectories
+        Get-CheckedItems $packageDirectories $selectedDirectories
         Uninstall-Packages -selectedDirectories $selectedDirectories
     }
 
