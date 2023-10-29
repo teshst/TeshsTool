@@ -145,12 +145,12 @@ function Show-PackageSelectionForm($packageDirectories) {
 
     $installButton.Add_Click{
         Get-SelectedItem $packageDirectories $selectedDirectories
-        Install-Package -selectedDirectories $selectedDirectories
+        Install-Package $selectedDirectories
     }
 
     $uninstallButton.Add_Click{
         Get-SelectedItem $packageDirectories $selectedDirectories
-        Uninstall-Package -selectedDirectories $selectedDirectories
+        Uninstall-Package $selectedDirectories
     }
 
     $packageSelectionForm.Add_Closing{
@@ -211,7 +211,7 @@ function Complete-ProgressForm($Status) {
 
     $selectedDirectories.Clear()
 
-    $selectedDirectories = Show-PackageSelectionForm -packageDirectories $packageDirectories
+    $selectedDirectories = Show-PackageSelectionForm $packageDirectories
 }
 
 # Close main window
@@ -361,16 +361,16 @@ function Uninstall($selectedDirectories) {
 
 # Install packages function connected to UI
 function Install-Package($selectedDirectories) {
-    Install -selectedDirectories $selectedDirectories
+    Install $selectedDirectories
 }
 
 # Uninstall packages function connected to UI
 function Uninstall-Package($selectedDirectories) {
-    Uninstall -selectedDirectories $selectedDirectories
+    Uninstall $selectedDirectories
 }
 
 # Get all directories in software folder
 $packageDirectories = Get-ChildItem $softwarePath -Directory
 
 # Show main window
-$selectedDirectories = Show-PackageSelectionForm -packageDirectories $packageDirectories
+$selectedDirectories = Show-PackageSelectionForm $packageDirectories
