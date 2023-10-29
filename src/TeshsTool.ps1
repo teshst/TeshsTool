@@ -144,12 +144,12 @@ function Show-PackageSelectionForm($packageDirectories) {
     }
 
     $installButton.Add_Click{
-        Selectedckedtems $packageDirectories $selectedDirectories
+        Get-SelectedItem $packageDirectories $selectedDirectories
         Install-Package -selectedDirectories $selectedDirectories
     }
 
     $uninstallButton.Add_Click{
-        Selectedckedtems $packageDirectories $selectedDirectories
+        Get-SelectedItem $packageDirectories $selectedDirectories
         Uninstall-Package -selectedDirectories $selectedDirectories
     }
 
