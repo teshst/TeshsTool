@@ -11,7 +11,7 @@ $proclist = @()
 # Stop on all errors
 $ErrorActionPreference = "Stop"
 
-# Log errors
+# Save logs to log folder
 function Save-Log($package, $message) {
     $logFile = Join-Path -Path $logPath -ChildPath ("Log_" + (Get-Date -Format "yyyyMMdd_HHmmss") + ".txt")
     $logMessage = "$(Get-Date) - $($package.FullName): $message"
@@ -68,14 +68,14 @@ if (-not (Test-Path -Path $softwarePath)) {
 Get-ChildItem -Path $softwarePath -Filter *.txt | Where-Object { $_.Name -ne "license.txt" } | Move-Item -Destination $logPath
 
 # Kill any running processes started by this script
-function Close-Processes($processes) {
+function Close-Process($processes) {
     foreach ($process in $processes) {
         Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
     }
 }
 
 # Add checked items to list
-function Get-CheckedItems($packageDirectories, $selectedDirectories) {
+function Get-SelectedItem($packageDirectories, $selectedDirectories) {
     for ($i = 0; $i -lt $packageDirectories.Count; $i++) {
         if ($checkedListBox.GetItemChecked($i)) {
             $selectedDirectories.Add($packageDirectories[$i])
@@ -130,24 +130,27 @@ function Show-PackageSelectionForm($packageDirectories) {
     foreach ($packageDirectory in $packageDirectories) {
         $checkedListBox.Items.Add($packageDirectory.Name, $false)
     }
+
     $selectAllButton.Add_Click{
         for ($i = 0; $i -lt $checkedListBox.Items.Count; $i++) {
             $checkedListBox.SetItemChecked($i, $true)
         }
     }
+
     $deselectAllButton.Add_Click{
         for ($i = 0; $i -lt $checkedListBox.Items.Count; $i++) {
             $checkedListBox.SetItemChecked($i, $false)
         }
     }
+
     $installButton.Add_Click{
-        Get-CheckedItems $packageDirectories $selectedDirectories
-        Install-Packages -selectedDirectories $selectedDirectories
+        Selectedckedtems $packageDirectories $selectedDirectories
+        Install-Package -selectedDirectories $selectedDirectories
     }
 
     $uninstallButton.Add_Click{
-        Get-CheckedItems $packageDirectories $selectedDirectories
-        Uninstall-Packages -selectedDirectories $selectedDirectories
+        Selectedckedtems $packageDirectories $selectedDirectories
+        Uninstall-Package -selectedDirectories $selectedDirectories
     }
 
     $packageSelectionForm.Add_Closing{
@@ -200,7 +203,8 @@ function Complete-ProgressForm($Status) {
     $progressBar.Value = 100
     $progressForm.Refresh()
 
-    Close-Processes $proclist
+    Close-Process
+    $proclist
 
     $progressForm.Dispose()
     $progressForm.Close()
@@ -213,7 +217,8 @@ function Complete-ProgressForm($Status) {
 # Close main window
 function Quit() {
 
-    Close-Processes $proclist
+    Close-Process
+    $proclist
 
     $packageSelectionForm.Dispose()
     $packageSelectionForm.Close()
@@ -355,12 +360,12 @@ function Uninstall($selectedDirectories) {
 }
 
 # Install packages function connected to UI
-function Install-Packages($selectedDirectories) {
+function Install-Package($selectedDirectories) {
     Install -selectedDirectories $selectedDirectories
 }
 
 # Uninstall packages function connected to UI
-function Uninstall-Packages($selectedDirectories) {
+function Uninstall-Package($selectedDirectories) {
     Uninstall -selectedDirectories $selectedDirectories
 }
 
