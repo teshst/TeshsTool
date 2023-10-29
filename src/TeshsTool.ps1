@@ -203,8 +203,7 @@ function Complete-ProgressForm($Status) {
     $progressBar.Value = 100
     $progressForm.Refresh()
 
-    Close-Process
-    $proclist
+    Close-Process $proclist
 
     $progressForm.Dispose()
     $progressForm.Close()
