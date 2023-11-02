@@ -1,3 +1,9 @@
+<<<<<<< HEAD
 Windows Registry Editor Version 5.00
 
+=======
+Windows Registry Editor Version 5.00
+
+# Registry Key to remove
+>>>>>>> c5a6cdd067f877cc0b8365c91a6159ba2844e96a
 [-HKEY_LOCAL_MACHINE\SOFTWARE\SAMPLE]
