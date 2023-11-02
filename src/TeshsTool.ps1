@@ -22,7 +22,7 @@ if (-not (Test-Path -Path $softwarePath)) {
 
 # Save logs to log folder
 function Save-Log($package, $message) {
-    $logFile = Join-Path -Path $logPath -ChildPath ("Log_" + (Get-Date -Format "yyyyMMdd_HHmmss") + ".txt")
+    $logFile = Join-Path -Path $logPath -ChildPath ("Log_" + (Get-Date -Format "yyyyMMdd_HHmmss") + ".log")
     $logMessage = "$(Get-Date) - $($package.FullName): $message"
     Add-Content -Path $logFile -Value $logMessage
     Show-Message $logMessage
@@ -60,21 +60,6 @@ function Show-Message($message) {
 
     $messageForm.ShowDialog()
 }
-
-# Check if log folder exist if not create it
-if (-not (Test-Path -Path $logPath)) {
-    Show-Message "Log directory not found. Creating directory..."
-    New-Item -Path $logPath -ItemType Directory
-}
-
-# Check if software folder exist if not create it
-if (-not (Test-Path -Path $softwarePath)) {
-    Show-Message "Software directory not found. Creating directory..."
-    New-Item -Path $softwarePath -ItemType Directory
-}
-
-# Move any .txt files to log folder unless licene.txt
-Get-ChildItem -Path $softwarePath -Filter *.txt | Where-Object { $_.Name -ne "license.txt" } | Move-Item -Destination $logPath
 
 # Kill any running processes started by this script
 function Close-Process($processes) {
@@ -249,11 +234,12 @@ function Install($selectedDirectories) {
                 $extension = $package.Extension
                 switch ($extension) {
                     ".exe" {
-                        $arguments = " /S /v /qn"
+                        $arguments = "/S /v /qn"
                         try {
-                            $proclist += Start-Process -FilePath "`"$($package.FullName)`"" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                            $proclist += Start-Process -FilePath "`"$($package.FullName)`"" -ArgumentList $arguments -Wait -NoNewWindow
                         }
                         catch {
+                            Show-Message -message $_.Exception.Message
                             Save-Log $package $_.Exception.Message
                         }
                     }
@@ -264,9 +250,6 @@ function Install($selectedDirectories) {
                         }
                         catch {
                             Show-Message -message $_.Exception.Message
-                            $proclist += Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
-                        }
-                        catch {
                             Save-Log $package $_.Exception.Message
                         }
                     }
@@ -277,9 +260,6 @@ function Install($selectedDirectories) {
                         }
                         catch {
                             Show-Message -message $_.Exception.Message
-                            $proclist += Start-Process -FilePath "regedit.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
-                        }
-                        catch {
                             Save-Log $package $_.Exception.Message
                         }
                     }
@@ -290,11 +270,6 @@ function Install($selectedDirectories) {
                         }
                         catch {
                             Show-Message -message $_.Exception.Message
-                        $arguments = "& $($package.FullName)"
-                        try {
-                            $proclist += Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
-                        }
-                        catch {
                             Save-Log $package $_.Exception.Message
                         }
                     }
@@ -305,9 +280,6 @@ function Install($selectedDirectories) {
                         }
                         catch {
                             Show-Message -message $_.Exception.Message
-                            $proclist += Start-Process -FilePath "wscript.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
-                        }
-                        catch {
                             Save-Log $package $_.Exception.Message
                         }
                     }
@@ -348,9 +320,6 @@ function Uninstall($selectedDirectories) {
                         }
                         catch {
                             Show-Message -message $_.Exception.Message
-                            $proclist += Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
-                        }
-                        catch {
                             Save-Log $package $_.Exception.Message
                         }
                     }
@@ -361,11 +330,6 @@ function Uninstall($selectedDirectories) {
                         }
                         catch {
                             Show-Message -message $_.Exception.Message
-                        $arguments = "& $($package.FullName)"
-                        try {
-                            $proclist += Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
-                        }
-                        catch {
                             Save-Log $package $_.Exception.Message
                         }
                     }
@@ -376,9 +340,6 @@ function Uninstall($selectedDirectories) {
                         }
                         catch {
                             Show-Message -message $_.Exception.Message
-                            $proclist += Start-Process -FilePath "wscript.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
-                        }
-                        catch {
                             Save-Log $package $_.Exception.Message
                         }
                     }
@@ -389,11 +350,6 @@ function Uninstall($selectedDirectories) {
                         }
                         catch {
                             Show-Message -message $_.Exception.Message
-                        $arguments = " /s `"$($package.FullName)`""
-                        try {
-                            $proclist += Start-Process -FilePath "regedit.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
-                        }
-                        catch {
                             Save-Log $package $_.Exception.Message
                         }
                     }
