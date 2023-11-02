@@ -14,15 +14,12 @@ if (-not (Test-Path -Path $logPath)) {
     New-Item -Path $logPath -ItemType Directory
 }
 
-<<<<<<< HEAD
 # Check if software folder exist if not create it
 if (-not (Test-Path -Path $softwarePath)) {
     Show-Message "Software directory not found. Creating directory..."
     New-Item -Path $softwarePath -ItemType Directory
 }
 
-=======
->>>>>>> main
 # Save logs to log folder
 function Save-Log($package, $message) {
     $logFile = Join-Path -Path $logPath -ChildPath ("Log_" + (Get-Date -Format "yyyyMMdd_HHmmss") + ".log")
@@ -198,11 +195,7 @@ function Complete-ProgressForm($Status) {
     $progressLabel.Text = $Status
     $progressForm.Refresh()
 
-<<<<<<< HEAD
     Close-Process -processes $proclist
-=======
-    Close-Process $proclist
->>>>>>> main
 
     $progressForm.Dispose()
     $progressForm.Close()
@@ -214,13 +207,7 @@ function Complete-ProgressForm($Status) {
 
 # Close main window
 function Quit() {
-<<<<<<< HEAD
     Close-Process -processes $proclist
-=======
-
-    Close-Process
-    $proclist
->>>>>>> main
 
     $packageSelectionForm.Dispose()
     $packageSelectionForm.Close()
