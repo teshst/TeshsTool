@@ -8,12 +8,21 @@ $logPath = ".\Logs"
 # Initialize process list
 $proclist = @()
 
-# Stop on all errors
-$ErrorActionPreference = "Stop"
+# Check if log folder exist if not create it
+if (-not (Test-Path -Path $logPath)) {
+    Show-Message "Log directory not found. Creating directory..."
+    New-Item -Path $logPath -ItemType Directory
+}
+
+# Check if software folder exist if not create it
+if (-not (Test-Path -Path $softwarePath)) {
+    Show-Message "Software directory not found. Creating directory..."
+    New-Item -Path $softwarePath -ItemType Directory
+}
 
 # Save logs to log folder
 function Save-Log($package, $message) {
-    $logFile = Join-Path -Path $logPath -ChildPath ("Log_" + (Get-Date -Format "yyyyMMdd_HHmmss") + ".txt")
+    $logFile = Join-Path -Path $logPath -ChildPath ("Log_" + (Get-Date -Format "yyyyMMdd_HHmmss") + ".log")
     $logMessage = "$(Get-Date) - $($package.FullName): $message"
     Add-Content -Path $logFile -Value $logMessage
     Show-Message $logMessage
@@ -51,21 +60,6 @@ function Show-Message($message) {
 
     $messageForm.ShowDialog()
 }
-
-# Check if log folder exist if not create it
-if (-not (Test-Path -Path $logPath)) {
-    Show-Message "Log directory not found. Creating directory..."
-    New-Item -Path $logPath -ItemType Directory
-}
-
-# Check if software folder exist if not create it
-if (-not (Test-Path -Path $softwarePath)) {
-    Show-Message "Software directory not found. Creating directory..."
-    New-Item -Path $softwarePath -ItemType Directory
-}
-
-# Move any .txt files to log folder unless licene.txt
-Get-ChildItem -Path $softwarePath -Filter *.txt | Where-Object { $_.Name -ne "license.txt" } | Move-Item -Destination $logPath
 
 # Kill any running processes started by this script
 function Close-Process($processes) {
@@ -157,8 +151,7 @@ function Show-PackageSelectionForm($packageDirectories) {
         Quit
     }
 
-    if ($packageSelectionForm.ShowDialog() -eq "Ok") {
-    }
+    $packageSelectionForm.ShowDialog()
 }
 
 # Main window for progress tracking
@@ -193,17 +186,16 @@ function Show-ProgressForm() {
 # Update progress window
 function Update-ProgressForm ($progressForm, $progressLabel, $progressBar, $status, $percentComplete) {
     $progressLabel.Text = $status
-    $progressBar.Value = [int]$percentComplete
+    $progressBar.Value = $percentComplete
     $progressForm.Refresh()
 }
 
 # Close progress window
 function Complete-ProgressForm($Status) {
     $progressLabel.Text = $Status
-    $progressBar.Value = 100
     $progressForm.Refresh()
 
-    Close-Process $proclist
+    Close-Process -processes $proclist
 
     $progressForm.Dispose()
     $progressForm.Close()
@@ -215,9 +207,7 @@ function Complete-ProgressForm($Status) {
 
 # Close main window
 function Quit() {
-
-    Close-Process
-    $proclist
+    Close-Process -processes $proclist
 
     $packageSelectionForm.Dispose()
     $packageSelectionForm.Close()
@@ -225,63 +215,71 @@ function Quit() {
 
 # Install packages
 function Install($selectedDirectories) {
-    $progress = 0
     if ($selectedDirectories.Count -gt 0) {
         $progressForm, $progressLabel, $progressBar = Show-ProgressForm
         foreach ($selectedDirectory in $selectedDirectories) {
             $directoryPath = Join-Path -Path $softwarePath -ChildPath $selectedDirectory.Name
             $packages = Get-ChildItem $directoryPath | Where-Object { $_.Extension -match "/*.(exe|msi|reg|ps1|vbs)$" -and $_.Name -notmatch '\.uninstaller\.\w+$' }
+
             $currentPackage = 0
+            $progress = 0
             foreach ($package in $packages) {
                 $currentPackage++
-                $status = "Installing $($selectedDirectory.Name) ($($currentPackage)/$($packages.count))..."
-                $percentComplete = ($progress / $selectedDirectories.Count) * 100
                 $progress++
+
+                $status = "Installing $($selectedDirectory.Name) ($($currentPackage)/$($packages.count))..."
+                $percentComplete = ($progress / $packages.Count) * 100
                 Update-ProgressForm -progressForm $progressForm -progressLabel $progressLabel -progressBar $progressBar -status $status -percentComplete $percentComplete
+
                 $extension = $package.Extension
                 switch ($extension) {
                     ".exe" {
-                        $arguments = " /S /v /qn"
+                        $arguments = "/S /v /qn"
                         try {
-                            $proclist += Start-Process -FilePath "`"$($package.FullName)`"" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                            $proclist += Start-Process -FilePath "`"$($package.FullName)`"" -ArgumentList $arguments -Wait -NoNewWindow
                         }
                         catch {
+                            Show-Message -message $_.Exception.Message
                             Save-Log $package $_.Exception.Message
                         }
                     }
                     ".msi" {
                         $arguments = "/i `"$($package.FullName)`" /quiet /norestart"
                         try {
-                            $proclist += Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                            $proclist += Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow
                         }
                         catch {
+                            Show-Message -message $_.Exception.Message
                             Save-Log $package $_.Exception.Message
                         }
                     }
                     ".reg" {
                         $arguments = "/s `"$($package.FullName)`""
                         try {
-                            $proclist += Start-Process -FilePath "regedit.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                            $proclist += Start-Process -FilePath "regedit.exe" -ArgumentList $arguments -Wait -NoNewWindow
                         }
                         catch {
+                            Show-Message -message $_.Exception.Message
                             Save-Log $package $_.Exception.Message
                         }
                     }
                     ".ps1" {
-                        $arguments = "& $($package.FullName)"
+                        $arguments = "& `"'$($package.FullName)'`""
                         try {
-                            $proclist += Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                            $proclist += Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Wait -NoNewWindow
                         }
                         catch {
+                            Show-Message -message $_.Exception.Message
                             Save-Log $package $_.Exception.Message
                         }
                     }
                     ".vbs" {
                         $arguments = "`"$($package.FullName)`""
                         try {
-                            $proclist += Start-Process -FilePath "wscript.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                            $proclist += Start-Process -FilePath "wscript.exe" -ArgumentList $arguments -Wait -NoNewWindow
                         }
                         catch {
+                            Show-Message -message $_.Exception.Message
                             Save-Log $package $_.Exception.Message
                         }
                     }
@@ -297,54 +295,61 @@ function Install($selectedDirectories) {
 
 # Uninstall packages
 function Uninstall($selectedDirectories) {
-    $progress = 0
     if ($selectedDirectories.Count -gt 0) {
         $progressForm, $progressLabel, $progressBar = Show-ProgressForm
         foreach ($selectedDirectory in $selectedDirectories) {
             $directoryPath = Join-Path -Path $softwarePath -ChildPath $selectedDirectory.Name
             $packages = Get-ChildItem $directoryPath | Where-Object { $_.Extension -match "/*.(msi)$" -or $_.Name -match '\.uninstaller\.\w+$' }
+
             $currentPackage = 0
+            $progress = 0
             foreach ($package in $packages) {
                 $currentPackage++
-                $status = "Uninstalling $($selectedDirectory.Name) ($($currentPackage)/$($packages.count))..."
-                $percentComplete = ($progress / $selectedDirectories.Count) * 100
                 $progress++
+
+                $status = "Uninstalling $($selectedDirectory.Name) ($($currentPackage)/$($packages.count))..."
+                $percentComplete = ($progress / $packages.Count) * 100
                 Update-ProgressForm -progressForm $progressForm -progressLabel $progressLabel -progressBar $progressBar -status $status -percentComplete $percentComplete
+
                 $extension = $package.Extension
                 switch ($extension) {
                     ".msi" {
                         $arguments = "/x `"$($package.FullName)`" /quiet /norestart"
                         try {
-                            $proclist += Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                            $proclist += Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow
                         }
                         catch {
+                            Show-Message -message $_.Exception.Message
                             Save-Log $package $_.Exception.Message
                         }
                     }
                     ".ps1" {
-                        $arguments = "& $($package.FullName)"
+                        $arguments = "& `"'$($package.FullName)'`""
                         try {
-                            $proclist += Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                            $proclist += Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Wait -NoNewWindow
                         }
                         catch {
+                            Show-Message -message $_.Exception.Message
                             Save-Log $package $_.Exception.Message
                         }
                     }
                     ".vbs" {
                         $arguments = "`"$($package.FullName)`""
                         try {
-                            $proclist += Start-Process -FilePath "wscript.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                            $proclist += Start-Process -FilePath "wscript.exe" -ArgumentList $arguments -Wait -NoNewWindow
                         }
                         catch {
+                            Show-Message -message $_.Exception.Message
                             Save-Log $package $_.Exception.Message
                         }
                     }
                     ".reg" {
-                        $arguments = " /s `"$($package.FullName)`""
+                        $arguments = "/s `"$($package.FullName)`""
                         try {
-                            $proclist += Start-Process -FilePath "regedit.exe" -ArgumentList $arguments -Wait -NoNewWindow -ErrorAction Stop
+                            $proclist += Start-Process -FilePath "regedit.exe" -ArgumentList $arguments -Wait -NoNewWindow
                         }
                         catch {
+                            Show-Message -message $_.Exception.Message
                             Save-Log $package $_.Exception.Message
                         }
                     }
