@@ -9,17 +9,17 @@ TeshsTool is a PowerShell script designed to automate the installation of softwa
 
 Before using TeshsTool, ensure you meet the following requirements:
 
-- PowerShell 3.0 or later
-- Administrative rights to run the program and install packages.
+  - PowerShell 3.0 or later
+  - Administrative rights to run the program and install packages.
 
 <details>
   <summary>Supported Extensions</summary>
 
-- .exe
-- .msi
-- .reg
-- .ps1
-- .vbs
+  - .exe
+  - .msi
+  - .reg
+  - .ps1
+  - .vbs
 
 </details>
 

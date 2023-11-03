@@ -20,9 +20,14 @@ function Save-Log($message) {
     Write-Verbose $logMessage
 }
 
-function Remove-Program([string] $program) {
-    Get-CimInstance -Class Win32_Product | Where-Object { $_.Name -eq $program } | Invoke-CimMethod -MethodName "Uninstall"
-    Write-Verbose "Removing $program"
+function Remove-Program {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param([string] $program)
+
+    if($PSCmdlet.ShouldProcess($program, 'Uninstall')) {
+        Get-CimInstance -Class Win32_Product | Where-Object { $_.Name -eq $program } | Invoke-CimMethod -MethodName "Uninstall"
+        Write-Verbose "Removing $program"
+    }
 }
 
 try {
