@@ -1,3 +1,6 @@
+#Requires -Version 3.0
+#Requires -RunAsAdministrator
+
 Add-Type -AssemblyName System.Windows.Forms
 
 # Locations
@@ -20,21 +23,16 @@ if (-not (Test-Path -Path $softwarePath)) {
     New-Item -Path $softwarePath -ItemType Directory
 }
 
-# Save logs to log folder
-function Save-Log($package, $message) {
-    $logFile = Join-Path -Path $logPath -ChildPath ("Log_" + (Get-Date -Format "yyyyMMdd_HHmmss") + ".log")
-    $logMessage = "$(Get-Date) - $($package.FullName): $message"
-    Add-Content -Path $logFile -Value $logMessage
-    Show-Message $logMessage
-}
-
 # Show message window
 function Show-Message($message) {
     $messageForm = New-Object System.Windows.Forms.Form
     $messageForm.Text = "Info"
     $messageForm.Size = New-Object System.Drawing.Size(400, 150)
     $messageForm.StartPosition = "CenterScreen"
-    $messageForm.Icon = New-Object System.Drawing.Icon($appIconPath)
+
+    if (Test-Path -Path $appIconPath) {
+        $messageForm.Icon = New-Object System.Drawing.Icon($appIconPath)
+    }
 
     $messageLabel = New-Object System.Windows.Forms.Label
     $messageLabel.AutoSize = $false
@@ -59,6 +57,14 @@ function Show-Message($message) {
     $messageForm.Controls.Add($okButton)
 
     $messageForm.ShowDialog()
+}
+
+# Save logs to log folder
+function Save-Log($package, $message) {
+    $logFile = Join-Path -Path $logPath -ChildPath ("Log_" + (Get-Date -Format "yyyyMMdd_HHmmss") + ".log")
+    $logMessage = "$(Get-Date) - $($package.FullName): $message"
+    Add-Content -Path $logFile -Value $logMessage
+    Show-Message $logMessage
 }
 
 # Kill any running processes started by this script
@@ -119,7 +125,9 @@ function Show-PackageSelectionForm($packageDirectories) {
     $uninstallButton.Size = New-Object System.Drawing.Size(75, 23)
     $packageSelectionForm.Controls.Add($uninstallButton)
 
-    $packageSelectionForm.Icon = New-Object System.Drawing.Icon($appIconPath)
+    if (Test-Path -Path $appIconPath) {
+        $packageSelectionForm.Icon = New-Object System.Drawing.Icon($appIconPath)
+    }
 
     foreach ($packageDirectory in $packageDirectories) {
         $checkedListBox.Items.Add($packageDirectory.Name, $false)
@@ -162,7 +170,10 @@ function Show-ProgressForm() {
     $progressForm.Text = "Installing Packages"
     $progressForm.Size = New-Object System.Drawing.Size(420, 150)
     $progressForm.StartPosition = "CenterScreen"
-    $progressForm.Icon = New-Object System.Drawing.Icon($appIconPath)
+
+    if (Test-Path -Path $appIconPath) {
+        $progressForm.Icon = New-Object System.Drawing.Icon($appIconPath)
+    }
 
     $progressLabel = New-Object System.Windows.Forms.Label
     $progressLabel.Size = New-Object System.Drawing.Size(360, 20)
