@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the mount point
-VOLUME="/Volumes/Macintosh HD"
+VOLUME="/Volumes/Macintosh\ HD"
 
 # Check if the volume is mounted
 if [ ! -d "$VOLUME" ]; then
