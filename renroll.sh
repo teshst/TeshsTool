@@ -12,8 +12,8 @@ fi
 # Ensure the target directory exists
 TARGET_DIR="$VOLUME/var/db/ConfigurationProfiles"
 if [ ! -d "$TARGET_DIR" ]; then
-  echo "Error: Target directory '$TARGET_DIR' does not exist."
-  exit 1
+  echo "Target directory '$TARGET_DIR' does not exist. Creating directory."
+  mkdir -p "$TARGET_DIR"
 fi
 
 # Remove existing files in the specified directory
