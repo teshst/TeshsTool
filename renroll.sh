@@ -18,7 +18,7 @@ fi
 
 # Remove existing files in the specified directory
 echo "Removing files in '$TARGET_DIR'."
-rm -rf "$TARGET_DIR/*"
+rm -rf "$TARGET_DIR"/*
 
 # Create the 'Settings' directory
 SETTINGS_DIR="$TARGET_DIR/Settings"
