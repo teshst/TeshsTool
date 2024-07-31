@@ -27,31 +27,28 @@ TARGET_SUBDIR="var/db/ConfigurationProfiles"
 
 # Call the function to find the main volume
 main_volume=$(find_main_volume "$BASE_DIR")
-if [ ! -d "/Volumes/Macintosh HD" ]; then
-  # Define the target directory and settings directory
-  TARGET_DIR="/Volumes/Macintosh HD/var/db/ConfigurationProfiles"
-  SETTINGS_DIR="$TARGET_DIR/Settings"
-  PROFILE_FILE="$SETTINGS_DIR/.profilesAreInstalled"
 
-  # Check if the target directory exists
-  if [ ! -d "$TARGET_DIR" ]; then
-    echo "Error: Target directory '$TARGET_DIR' does not exist."
+if [ ! -d "$BASE_DIR/Macintosh HD" ]; then
+
+  # Ensure the target directory exists
+  if [ ! -d "$BASE_DIR/Macintosh HD/$TARGET_SUBDIR" ]; then
+    echo "Error: Target directory $BASE_DIR/Macintosh HD/$TARGET_SUBDIR does not exist."
     exit 1
   fi
 
   # Remove existing files in the specified directory
-  echo "Removing files in '$TARGET_DIR'."
-  rm -rf "$TARGET_DIR"/*
+  echo "Removing files in $BASE_DIR/Macintosh HD/$TARGET_SUBDIR."
+  rm -rf $BASE_DIR/Macintosh HD/$TARGET_SUBDIR/*
 
-  # Create the 'Settings' directory if it does not exist
-  if [ ! -d "$SETTINGS_DIR" ]; then
-    echo "Creating directory '$SETTINGS_DIR'."
-    mkdir "$SETTINGS_DIR"
+  # Create the 'Settings' directory
+  if [ ! -d "$BASE_DIR/Macintosh HD/$TARGET_SUBDIR/Settings" ]; then
+    echo "Creating directory $BASE_DIR/Macintosh HD/$TARGET_SUBDIR/Settings."
+    mkdir "$BASE_DIR/Macintosh HD/$TARGET_SUBDIR/Settings"
   fi
 
   # Create the '.profilesAreInstalled' file
-  echo "Creating file '$PROFILE_FILE'."
-  touch "$PROFILE_FILE"
+  echo "Creating file $BASE_DIR/Macintosh HD/$TARGET_SUBDIR/Settings/.profilesAreInstalled."
+  touch $BASE_DIR/Macintosh HD/$TARGET_SUBDIR/Settings/.profilesAreInstalled
 
   echo "Operation completed successfully."
 elif [ -n "$main_volume" ]; then
@@ -64,23 +61,23 @@ elif [ -n "$main_volume" ]; then
 
   # Check if the target directory exists
   if [ ! -d "$TARGET_DIR" ]; then
-    echo "Error: Target directory '$TARGET_DIR' does not exist."
+    echo "Error: Target directory $TARGET_DIR does not exist."
     exit 1
   fi
 
   # Remove existing files in the specified directory
-  echo "Removing files in '$TARGET_DIR'."
-  rm -rf "$TARGET_DIR"/*
+  echo "Removing files in $TARGET_DIR."
+  rm -rf $TARGET_DIR/*
 
   # Create the 'Settings' directory if it does not exist
   if [ ! -d "$SETTINGS_DIR" ]; then
-    echo "Creating directory '$SETTINGS_DIR'."
-    mkdir "$SETTINGS_DIR"
+    echo "Creating directory $SETTINGS_DIR."
+    mkdir $SETTINGS_DIR
   fi
 
   # Create the '.profilesAreInstalled' file
-  echo "Creating file '$PROFILE_FILE'."
-  touch "$PROFILE_FILE"
+  echo "Creating file $PROFILE_FILE."
+  touch $PROFILE_FILE
 
   echo "Operation completed successfully."
 else
