@@ -38,7 +38,7 @@ if [ -d "$BASE_DIR/Macintosh HD" ]; then
 
   # Remove existing files in the specified directory
   echo "Removing files in $BASE_DIR/Macintosh HD/$TARGET_SUBDIR."
-  rm -rf $BASE_DIR/Macintosh HD/$TARGET_SUBDIR/*
+  rm -rf "$BASE_DIR/Macintosh HD/$TARGET_SUBDIR"/*
 
   # Create the 'Settings' directory
   if [ ! -d "$BASE_DIR/Macintosh HD/$TARGET_SUBDIR/Settings" ]; then
@@ -48,7 +48,7 @@ if [ -d "$BASE_DIR/Macintosh HD" ]; then
 
   # Create the '.profilesAreInstalled' file
   echo "Creating file $BASE_DIR/Macintosh HD/$TARGET_SUBDIR/Settings/.profilesAreInstalled."
-  touch $BASE_DIR/Macintosh HD/$TARGET_SUBDIR/Settings/.profilesAreInstalled
+  touch "$BASE_DIR/Macintosh HD/$TARGET_SUBDIR/Settings/.profilesAreInstalled"
 
   echo "Operation completed successfully."
 elif [ -n "$main_volume" ]; then
@@ -67,17 +67,17 @@ elif [ -n "$main_volume" ]; then
 
   # Remove existing files in the specified directory
   echo "Removing files in $TARGET_DIR."
-  rm -rf $TARGET_DIR/*
+  rm -rf "$TARGET_DIR"/*
 
   # Create the 'Settings' directory if it does not exist
   if [ ! -d "$SETTINGS_DIR" ]; then
     echo "Creating directory $SETTINGS_DIR."
-    mkdir $SETTINGS_DIR
+    mkdir "$SETTINGS_DIR"
   fi
 
   # Create the '.profilesAreInstalled' file
   echo "Creating file $PROFILE_FILE."
-  touch $PROFILE_FILE
+  touch "$PROFILE_FILE"
 
   echo "Operation completed successfully."
 else
