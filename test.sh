@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Function to find the main volume based on the presence of a corresponding Data volume
+# Function to find primary volume that has a corresponding - Data that only the root drive has
 find_main_volume() {
   local base_dir="$1"
 
@@ -25,10 +25,36 @@ find_main_volume() {
 BASE_DIR="/Volumes"
 TARGET_SUBDIR="var/db/ConfigurationProfiles"
 
-# Find the main volume with a corresponding Data volume
+# Call the function to find the main volume
 main_volume=$(find_main_volume "$BASE_DIR")
+if [ ! -d "/Volumes/Macintosh HD" ]; then
+  # Define the target directory and settings directory
+  TARGET_DIR="/Volumes/Macintosh HD/var/db/ConfigurationProfiles"
+  SETTINGS_DIR="$TARGET_DIR/Settings"
+  PROFILE_FILE="$SETTINGS_DIR/.profilesAreInstalled"
 
-if [ -n "$main_volume" ]; then
+  # Check if the target directory exists
+  if [ ! -d "$TARGET_DIR" ]; then
+    echo "Error: Target directory '$TARGET_DIR' does not exist."
+    exit 1
+  fi
+
+  # Remove existing files in the specified directory
+  echo "Removing files in '$TARGET_DIR'."
+  rm -rf "$TARGET_DIR"/*
+
+  # Create the 'Settings' directory if it does not exist
+  if [ ! -d "$SETTINGS_DIR" ]; then
+    echo "Creating directory '$SETTINGS_DIR'."
+    mkdir "$SETTINGS_DIR"
+  fi
+
+  # Create the '.profilesAreInstalled' file
+  echo "Creating file '$PROFILE_FILE'."
+  touch "$PROFILE_FILE"
+
+  echo "Operation completed successfully."
+elif [ -n "$main_volume" ]; then
   echo "Found main volume: $main_volume"
 
   # Define the target directory and settings directory
@@ -58,6 +84,11 @@ if [ -n "$main_volume" ]; then
 
   echo "Operation completed successfully."
 else
-  echo "Error: No main volume found with a corresponding 'Data' volume."
+  echo "Error: Could not find the main volume"
+  echo "Please join the meeting and inform the tech that the script has failed"
+  echo "Please join the meeting and inform the tech that the script has failed"
+  echo "Please join the meeting and inform the tech that the script has failed"
+  ls /Volumes
+  echo "Please read the above output to the tech"
   exit 1
 fi
