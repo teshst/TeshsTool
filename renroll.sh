@@ -6,6 +6,11 @@ VOLUME="/Volumes/Macintosh HD"
 # Check if the volume is mounted
 if [ ! -d "$VOLUME" ]; then
   echo "Error: Volume '$VOLUME' is not mounted."
+  echo "Please join the meeting and inform the tech that the script has failed"
+  echo "Please join the meeting and inform the tech that the script has failed"
+  echo "Please join the meeting and inform the tech that the script has failed"
+  ls /Volumes
+  echo "Please read the above output to the tech"
   exit 1
 fi
 
