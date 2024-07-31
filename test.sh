@@ -28,7 +28,7 @@ TARGET_SUBDIR="var/db/ConfigurationProfiles"
 # Call the function to find the main volume
 main_volume=$(find_main_volume "$BASE_DIR")
 
-if [ ! -d "$BASE_DIR/Macintosh HD" ]; then
+if [ -n "$BASE_DIR/Macintosh HD" ]; then
 
   # Ensure the target directory exists
   if [ ! -d "$BASE_DIR/Macintosh HD/$TARGET_SUBDIR" ]; then
