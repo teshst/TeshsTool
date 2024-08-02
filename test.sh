@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # List of volume patterns to exclude
-EXCLUDE_PATTERNS=("macOS Base System" "Preboot" ".fseventsd" "* -*")
+EXCLUDE_PATTERNS=("macOS Base System" "Preboot" ".fseventsd" "* -Data")
 
 # Function to check if a volume should be excluded
 is_excluded_volume() {
