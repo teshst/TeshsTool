@@ -1,22 +1,23 @@
 #!/bin/bash
 
-# Function to find primary volume that has a corresponding - Data that only the root drive has
-find_main_volume() {
-  local base_dir="$1"
+# List of volume names to exclude
+EXCLUDE_VOLUMES=("macOS Base System" "Preboot" ".fseventsd")
 
-  # Loop through all volumes in the base directory
-  for volume in "$base_dir"/*; do
-    if [ -d "$volume" ]; then
-      local volume_name=$(basename "$volume")
-      local data_volume="$base_dir/$volume_name - Data"
-
-      # Check if the Data volume exists
-      if [ -d "$data_volume" ]; then
-        echo "$volume"
-        return 0
-      fi
+# Function to check if a volume should be excluded
+is_excluded_volume() {
+  local volume_name="$1"
+  
+  # Check if the volume name is in the exclusion list
+  for excluded in "${EXCLUDE_VOLUMES[@]}"; do
+    if [ "$volume_name" == "$excluded" ]; then
+      return 0
     fi
   done
+  
+  # Exclude volumes with '- Data' in the name
+  if [[ "$volume_name" == *"- Data" ]]; then
+    return 0
+  fi
 
   return 1
 }
@@ -25,37 +26,26 @@ find_main_volume() {
 BASE_DIR="/Volumes"
 TARGET_SUBDIR="var/db/ConfigurationProfiles"
 
-# Call the function to find the main volume
-main_volume=$(find_main_volume "$BASE_DIR")
-
-if [ -d "$BASE_DIR/Macintosh HD" ]; then
-
-  # Ensure the target directory exists
-  if [ ! -d "$BASE_DIR/Macintosh HD/$TARGET_SUBDIR" ]; then
-    echo "Error: Target directory $BASE_DIR/Macintosh HD/$TARGET_SUBDIR does not exist."
-    exit 1
+# Find valid volumes and check if the target directory exists
+valid_volume=""
+for volume in "$BASE_DIR"/*; do
+  if [ -d "$volume" ]; then
+    local volume_name=$(basename "$volume")
+    
+    # Exclude specific volumes
+    if ! is_excluded_volume "$volume_name"; then
+      valid_volume="$volume"
+      break
+    fi
   fi
+done
 
-  # Remove existing files in the specified directory
-  echo "Removing files in $BASE_DIR/Macintosh HD/$TARGET_SUBDIR."
-  rm -rf "$BASE_DIR/Macintosh HD/$TARGET_SUBDIR"/*
-
-  # Create the 'Settings' directory
-  if [ ! -d "$BASE_DIR/Macintosh HD/$TARGET_SUBDIR/Settings" ]; then
-    echo "Creating directory $BASE_DIR/Macintosh HD/$TARGET_SUBDIR/Settings."
-    mkdir "$BASE_DIR/Macintosh HD/$TARGET_SUBDIR/Settings"
-  fi
-
-  # Create the '.profilesAreInstalled' file
-  echo "Creating file $BASE_DIR/Macintosh HD/$TARGET_SUBDIR/Settings/.profilesAreInstalled."
-  touch "$BASE_DIR/Macintosh HD/$TARGET_SUBDIR/Settings/.profilesAreInstalled"
-
-  echo "Operation completed successfully."
-elif [ -n "$main_volume" ]; then
-  echo "Found main volume: $main_volume"
+# Check if a valid volume was found
+if [ -n "$valid_volume" ]; then
+  echo "Found valid volume: $valid_volume"
 
   # Define the target directory and settings directory
-  TARGET_DIR="$main_volume/$TARGET_SUBDIR"
+  TARGET_DIR="$valid_volume/$TARGET_SUBDIR"
   SETTINGS_DIR="$TARGET_DIR/Settings"
   PROFILE_FILE="$SETTINGS_DIR/.profilesAreInstalled"
 
@@ -72,7 +62,7 @@ elif [ -n "$main_volume" ]; then
   # Create the 'Settings' directory if it does not exist
   if [ ! -d "$SETTINGS_DIR" ]; then
     echo "Creating directory $SETTINGS_DIR."
-    mkdir "$SETTINGS_DIR"
+    mkdir -p "$SETTINGS_DIR"
   fi
 
   # Create the '.profilesAreInstalled' file
@@ -81,11 +71,8 @@ elif [ -n "$main_volume" ]; then
 
   echo "Operation completed successfully."
 else
-  echo "Error: Could not find the main volume"
-  echo "Please join the meeting and inform the tech that the script has failed"
-  echo "Please join the meeting and inform the tech that the script has failed"
-  echo "Please join the meeting and inform the tech that the script has failed"
+  echo "Error: Could not find a valid volume."
+  echo "Listing all available volumes:"
   ls /Volumes
-  echo "Please read the above output to the tech"
   exit 1
 fi
