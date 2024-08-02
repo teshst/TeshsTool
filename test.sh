@@ -1,20 +1,20 @@
 #!/bin/bash
 
-# List of volume names to exclude
-EXCLUDE_VOLUMES=("macOS Base System" "Preboot" ".fseventsd" "* -Data")
+# List of volume patterns to exclude
+EXCLUDE_PATTERNS=("macOS Base System" "Preboot" ".fseventsd" "* -Data")
 
 # Function to check if a volume should be excluded
 is_excluded_volume() {
   local volume_name="$1"
   
-  # Check if the volume name is in the exclusion list
-  for excluded in "${EXCLUDE_VOLUMES[@]}"; do
-    if [ "$volume_name" == "$excluded" ]; then
-      return 0
-    fi
+  # Check if the volume name matches any exclusion pattern
+  for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+    case "$volume_name" in
+      $pattern) return 0 ;;  # Exclude this volume
+    esac
   done
-
-  return 1
+  
+  return 1  # Not excluded
 }
 
 # Base directory to search under /Volumes
@@ -25,7 +25,7 @@ TARGET_SUBDIR="var/db/ConfigurationProfiles"
 valid_volume=""
 for volume in "$BASE_DIR"/*; do
   if [ -d "$volume" ]; then
-    local volume_name=$(basename "$volume")
+    volume_name=$(basename "$volume")
     
     # Exclude specific volumes
     if ! is_excluded_volume "$volume_name"; then
