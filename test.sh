@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # List of volume names to exclude
-EXCLUDE_VOLUMES=("macOS Base System" "Preboot" ".fseventsd")
+EXCLUDE_VOLUMES=("macOS Base System" "Preboot" ".fseventsd" "* -Data")
 
 # Function to check if a volume should be excluded
 is_excluded_volume() {
@@ -13,11 +13,6 @@ is_excluded_volume() {
       return 0
     fi
   done
-  
-  # Exclude volumes with '- Data' in the name
-  if [[ "$volume_name" == *" -Data" ]]; then
-    return 0
-  fi
 
   return 1
 }
