@@ -15,7 +15,7 @@ is_excluded_volume() {
   done
   
   # Exclude volumes with '- Data' in the name
-  if [[ "$volume_name" == *"- Data" ]]; then
+  if [[ "$volume_name" == *" -Data" ]]; then
     return 0
   fi
 
