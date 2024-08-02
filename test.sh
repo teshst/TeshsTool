@@ -29,8 +29,13 @@ for volume in "$BASE_DIR"/*; do
     
     # Exclude specific volumes
     if ! is_excluded_volume "$volume_name"; then
-      valid_volume="$volume"
-      break
+      TARGET_DIR="$volume/$TARGET_SUBDIR"
+
+      # Check if the target directory exists
+      if [ -d "$TARGET_DIR" ]; then
+        valid_volume="$volume"
+        break
+      fi
     fi
   fi
 done
@@ -67,7 +72,11 @@ if [ -n "$valid_volume" ]; then
   echo "Operation completed successfully."
 else
   echo "Error: Could not find a valid volume."
-  echo "Listing all available volumes:"
+  echo "Please join the meeting and inform the tech that the script has failed"
+  echo "Please join the meeting and inform the tech that the script has failed"
+  echo "Please join the meeting and inform the tech that the script has failed"
+  echo "Listing all available volumes"
   ls /Volumes
+  echo "Please read the above output to the tech"
   exit 1
 fi
